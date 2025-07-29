@@ -6,7 +6,15 @@ import Dashboard from '@/components/Dashboard';
 import AdminDashboard from '@/components/AdminDashboard';
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, profile, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginForm />;
@@ -15,7 +23,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      {user.role === 'admin' ? <AdminDashboard /> : <Dashboard />}
+      {profile?.role === 'admin' ? <AdminDashboard /> : <Dashboard />}
     </div>
   );
 };

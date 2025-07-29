@@ -15,7 +15,7 @@ import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [checklist, setChecklist] = useState<DailyChecklist | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
   const downloadPDF = async () => {
     if (!checklist || !printRef.current) return;
     
-    const filename = `IT_Checklist_${today}_${user?.name?.replace(/\s+/g, '_')}.pdf`;
+    const filename = `IT_Checklist_${today}_${(profile?.name || user?.email)?.replace(/\s+/g, '_')}.pdf`;
     
     const opt = {
       margin: 0.5,
@@ -75,7 +75,7 @@ const Dashboard: React.FC = () => {
     // Add metadata sheet
     const metaData = [
       ['Date', checklist.date],
-      ['Technician', user?.name || 'Unknown'],
+      ['Technician', profile?.name || user?.email || 'Unknown'],
       ['Status', checklist.overallStatus],
       ['Total Tasks', checklist.items.length],
       ['Completed Tasks', checklist.items.filter(item => item.completed).length],
@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
     const metaSheet = XLSX.utils.aoa_to_sheet(metaData);
     XLSX.utils.book_append_sheet(workbook, metaSheet, 'Summary');
 
-    const filename = `IT_Checklist_${today}_${user?.name?.replace(/\s+/g, '_')}.xlsx`;
+    const filename = `IT_Checklist_${today}_${(profile?.name || user?.email)?.replace(/\s+/g, '_')}.xlsx`;
     
     try {
       XLSX.writeFile(workbook, filename);
@@ -381,7 +381,7 @@ const Dashboard: React.FC = () => {
         <PrintableChecklist 
           ref={printRef}
           checklist={checklist}
-          userName={user?.name || 'Unknown User'}
+          userName={profile?.name || user?.email || 'Unknown User'}
         />
       </div>
     </div>

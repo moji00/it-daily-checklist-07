@@ -1,87 +1,139 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User, AuthContextType } from '@/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Profile {
+  id: string;
+  user_id: string;
+  username: string;
+  role: 'admin' | 'user';
+  name: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
+  session: Session | null;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (password: string) => Promise<{ error: any }>;
+  isLoading: boolean;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Initialize mock users in localStorage if not exists
-const initializeMockUsers = () => {
-  const savedUsers = localStorage.getItem('mockUsers');
-  if (!savedUsers) {
-    const defaultUsers: (User & { password: string })[] = [
-      {
-        id: '1',
-        username: 'admin',
-        password: 'admin123',
-        role: 'admin',
-        name: 'IT Administrator'
-      },
-      {
-        id: '2',
-        username: 'john.doe',
-        password: 'user123',
-        role: 'user',
-        name: 'John Doe'
-      },
-      {
-        id: '3',
-        username: 'jane.smith',
-        password: 'user123',
-        role: 'user',
-        name: 'Jane Smith'
-      }
-    ];
-    localStorage.setItem('mockUsers', JSON.stringify(defaultUsers));
-  }
-};
-
-const getMockUsers = (): (User & { password: string })[] => {
-  const savedUsers = localStorage.getItem('mockUsers');
-  return savedUsers ? JSON.parse(savedUsers) : [];
-};
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    initializeMockUsers();
-    const savedUser = localStorage.getItem('currentUser');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockUsers = getMockUsers();
-    const foundUser = mockUsers.find(
-      u => u.username === username && u.password === password
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile
+          setTimeout(async () => {
+            try {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              setProfile(profileData as Profile);
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        setIsLoading(false);
+      }
     );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (!session) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signUp = async (email: string, password: string, name: string) => {
+    setIsLoading(true);
+    const redirectUrl = `${window.location.origin}/`;
     
-    if (foundUser) {
-      const userWithoutPassword = {
-        id: foundUser.id,
-        username: foundUser.username,
-        role: foundUser.role,
-        name: foundUser.name
-      };
-      setUser(userWithoutPassword);
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-      setIsLoading(false);
-      return true;
-    }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          name: name
+        }
+      }
+    });
     
     setIsLoading(false);
-    return false;
+    return { error };
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
+  const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    setIsLoading(false);
+    return { error };
+  };
+
+  const signOut = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setProfile(null);
+    setIsLoading(false);
+  };
+
+  const resetPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+    return { error };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
+    return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      session,
+      signUp,
+      signIn,
+      signOut,
+      resetPassword,
+      updatePassword,
+      isLoading
+    }}>
       {children}
     </AuthContext.Provider>
   );

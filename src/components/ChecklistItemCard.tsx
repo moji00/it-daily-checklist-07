@@ -21,13 +21,13 @@ const ChecklistItemCard: React.FC<ChecklistItemCardProps> = ({ item, onUpdate, o
   const [remarks, setRemarks] = useState(item.remarks || '');
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
   const [showSubTasks, setShowSubTasks] = useState(false);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const handleToggleComplete = () => {
     onUpdate(item.id, {
       completed: !item.completed,
       completedAt: !item.completed ? new Date() : undefined,
-      completedBy: !item.completed ? user?.name : undefined,
+      completedBy: !item.completed ? (profile?.name || user?.email) : undefined,
       remarks: remarks
     });
   };

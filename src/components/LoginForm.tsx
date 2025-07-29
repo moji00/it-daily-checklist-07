@@ -5,26 +5,70 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Shield, User } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const LoginForm: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
+  const { signIn, signUp, resetPassword, isLoading } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     
-    if (!username || !password) {
-      setError('Please enter both username and password');
+    if (!loginEmail || !loginPassword) {
+      setError('Please enter both email and password');
       return;
     }
 
-    const success = await login(username, password);
-    if (!success) {
-      setError('Invalid username or password');
+    const { error } = await signIn(loginEmail, loginPassword);
+    if (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    
+    if (!signupEmail || !signupPassword || !signupName) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage('Please check your email to confirm your account');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    
+    if (!resetEmail) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    const { error } = await resetPassword(resetEmail);
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage('Password reset email sent! Please check your inbox.');
     }
   };
 
@@ -36,60 +80,142 @@ const LoginForm: React.FC = () => {
             <Shield className="w-8 h-8 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold">IT Daily Checklist</CardTitle>
-          <CardDescription>Sign in to access your daily tasks</CardDescription>
+          <CardDescription>Manage your daily IT tasks</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                disabled={isLoading}
-              />
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="reset">Reset</TabsTrigger>
+            </TabsList>
             
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <TabsContent value="login">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-          </form>
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="Enter your full name"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Sign Up'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="reset">
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending reset email...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
           
-          <div className="mt-6 pt-4 border-t border-border">
-            <div className="text-sm text-muted-foreground">
-              <p className="mb-2 font-medium">Demo Accounts:</p>
-              <div className="space-y-1">
-                <p><User className="inline w-3 h-3 mr-1" />Admin: admin / admin123</p>
-                <p><User className="inline w-3 h-3 mr-1" />User: john.doe / user123</p>
-              </div>
-            </div>
-          </div>
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {message && (
+            <Alert className="mt-4">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>
