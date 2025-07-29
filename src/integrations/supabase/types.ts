@@ -14,7 +14,191 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checklist_items: {
+        Row: {
+          category: string
+          completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          daily_checklist_id: string
+          description: string
+          id: string
+          priority: string
+          remarks: string | null
+          template_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          daily_checklist_id: string
+          description: string
+          id?: string
+          priority: string
+          remarks?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          daily_checklist_id?: string
+          description?: string
+          id?: string
+          priority?: string
+          remarks?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_daily_checklist_id_fkey"
+            columns: ["daily_checklist_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          priority: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          priority: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_checklists: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          overall_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          overall_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          overall_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          role: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          role?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      subtasks: {
+        Row: {
+          checklist_item_id: string
+          completed: boolean
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          checklist_item_id: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          checklist_item_id?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtasks_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
