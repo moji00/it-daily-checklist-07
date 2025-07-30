@@ -62,9 +62,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onOpenChange, onSuccess, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Authentication</DialogTitle>
+      <DialogContent className="sm:max-w-md bg-white">
+        <DialogHeader className="text-center space-y-4">
+          <div className="space-y-2">
+            <DialogTitle className="text-2xl font-bold text-center text-foreground">IT Daily Checklist</DialogTitle>
+            <p className="text-muted-foreground text-center">Sign in to access your daily checklist</p>
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
