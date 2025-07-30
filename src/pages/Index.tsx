@@ -36,24 +36,9 @@ const Index = () => {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-6">
-          <div className="mx-auto w-24 h-24 bg-primary rounded-full flex items-center justify-center mb-8">
-            <Shield className="w-12 h-12 text-primary-foreground" />
-          </div>
-          <h1 className="text-4xl font-bold text-foreground">IT Daily Checklist</h1>
-          <p className="text-xl text-muted-foreground">Manage your daily IT tasks efficiently</p>
-          <Button 
-            onClick={() => setAuthModalOpen(true)} 
-            size="lg"
-            className="px-8 py-3 text-lg"
-          >
-            Get Started
-          </Button>
-        </div>
-
         <AuthModal 
-          open={authModalOpen} 
-          onOpenChange={setAuthModalOpen}
+          open={true} 
+          onOpenChange={() => {}} // Prevent closing since it's the only way to access the app
           onSuccess={handleAuthSuccess}
           onError={handleAuthError}
         />

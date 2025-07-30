@@ -51,7 +51,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onOpenChange, onSuccess, on
       return;
     }
 
-    const { error } = await signUp(registerData.email, registerData.password, registerData.name);
+    const { error } = await signUp(registerData.email, registerData.password, registerData.name, registerData.role);
     if (error) {
       onError(error.message);
     } else {

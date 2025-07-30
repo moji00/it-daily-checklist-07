@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_data: {
+        Row: {
+          access_level: string | null
+          created_at: string
+          department: string | null
+          id: string
+          permissions: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          permissions?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          permissions?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      admin_user_data: {
+        Row: {
+          access_level: string | null
+          assigned_tasks: string[] | null
+          created_at: string
+          id: string
+          permissions: string[] | null
+          supervisor_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string | null
+          assigned_tasks?: string[] | null
+          created_at?: string
+          id?: string
+          permissions?: string[] | null
+          supervisor_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string | null
+          assigned_tasks?: string[] | null
+          created_at?: string
+          id?: string
+          permissions?: string[] | null
+          supervisor_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       checklist_items: {
         Row: {
           category: string
