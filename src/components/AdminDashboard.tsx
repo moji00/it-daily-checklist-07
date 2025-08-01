@@ -7,14 +7,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DailyChecklist, User } from '@/types';
-import { Users, CheckCircle, Clock, AlertTriangle, Calendar, UserPlus } from 'lucide-react';
+import { Users, CheckCircle, Clock, AlertTriangle, Calendar as CalendarIcon, UserPlus, Eye } from 'lucide-react';
+import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
 const AdminDashboard: React.FC = () => {
   const [allChecklists, setAllChecklists] = useState<DailyChecklist[]>([]);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'user' as 'admin' | 'user' });
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedChecklist, setSelectedChecklist] = useState<DailyChecklist | null>(null);
+  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -107,11 +114,46 @@ const AdminDashboard: React.FC = () => {
     });
   };
 
+  const getChecklistsForDate = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return allChecklists.filter(checklist => checklist.date === dateString);
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setIsCalendarOpen(false);
+    }
+  };
+
+  const viewChecklist = (checklist: DailyChecklist) => {
+    setSelectedChecklist(checklist);
+    setIsChecklistOpen(true);
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
         <div className="flex items-center gap-4">
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+          
           <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -172,7 +214,7 @@ const AdminDashboard: React.FC = () => {
             </DialogContent>
           </Dialog>
           <Badge variant="outline" className="flex items-center">
-            <Calendar className="w-3 h-3 mr-1" />
+            <CalendarIcon className="w-3 h-3 mr-1" />
             {new Date().toLocaleDateString()}
           </Badge>
         </div>
@@ -241,16 +283,27 @@ const AdminDashboard: React.FC = () => {
         </TabsList>
         
         <TabsContent value="today" className="space-y-4">
-          <h2 className="text-lg font-semibold">Today's User Activity</h2>
-          {todaysChecklists.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">No user activity today</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {todaysChecklists.map((checklist) => {
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              {selectedDate ? 
+                `User Activity for ${format(selectedDate, "EEEE, MMMM do, yyyy")}` : 
+                "Today's User Activity"
+              }
+            </h2>
+          </div>
+          {(() => {
+            const checklistsForSelectedDate = selectedDate ? getChecklistsForDate(selectedDate) : todaysChecklists;
+            return checklistsForSelectedDate.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    No user activity for {selectedDate ? format(selectedDate, "MMMM do, yyyy") : "today"}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {checklistsForSelectedDate.map((checklist) => {
                 const completedTasks = checklist.items.filter(item => item.completed).length;
                 const totalTasks = checklist.items.length;
                 const progressPercentage = (completedTasks / totalTasks) * 100;
@@ -259,7 +312,17 @@ const AdminDashboard: React.FC = () => {
                   <Card key={checklist.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{getUserName(checklist.userId)}</CardTitle>
+                        <div className="flex items-center gap-3">
+                          <CardTitle className="text-base">{getUserName(checklist.userId)}</CardTitle>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => viewChecklist(checklist)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Tasks
+                          </Button>
+                        </div>
                         <Badge className={getStatusColor(checklist.overallStatus)}>
                           {checklist.overallStatus}
                         </Badge>
@@ -289,9 +352,10 @@ const AdminDashboard: React.FC = () => {
                     </CardContent>
                   </Card>
                 );
-              })}
-            </div>
-          )}
+                })}
+              </div>
+            );
+          })()}
         </TabsContent>
         
         <TabsContent value="history" className="space-y-4">
@@ -338,6 +402,73 @@ const AdminDashboard: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Checklist Detail Modal */}
+      <Dialog open={isChecklistOpen} onOpenChange={setIsChecklistOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedChecklist && `${getUserName(selectedChecklist.userId)}'s Checklist - ${format(new Date(selectedChecklist.date), "MMMM do, yyyy")}`}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedChecklist && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Badge className={getStatusColor(selectedChecklist.overallStatus)}>
+                  {selectedChecklist.overallStatus}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {selectedChecklist.items.filter(item => item.completed).length} / {selectedChecklist.items.length} tasks completed
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                {selectedChecklist.items.map((item) => (
+                  <Card key={item.id} className={item.completed ? 'border-success' : ''}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className={`font-medium ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+                              {item.title}
+                            </h4>
+                            <Badge variant={
+                              item.priority === 'critical' ? 'destructive' :
+                              item.priority === 'high' ? 'default' :
+                              item.priority === 'medium' ? 'secondary' : 'outline'
+                            }>
+                              {item.priority}
+                            </Badge>
+                            <Badge variant="outline">{item.category}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                          {item.remarks && (
+                            <div className="bg-muted p-2 rounded text-xs">
+                              <strong>Remarks:</strong> {item.remarks}
+                            </div>
+                          )}
+                          {item.completedAt && (
+                            <p className="text-xs text-success mt-2">
+                              Completed: {new Date(item.completedAt).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          {item.completed ? (
+                            <CheckCircle className="w-5 h-5 text-success" />
+                          ) : (
+                            <div className="w-5 h-5 border-2 border-muted rounded-full" />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
