@@ -11,7 +11,7 @@ import { Loader2, Shield } from 'lucide-react';
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (isLogin?: boolean) => void;
   onError: (message: string) => void;
 }
 
@@ -38,7 +38,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onOpenChange, onSuccess, on
     if (error) {
       onError(error.message);
     } else {
-      onSuccess();
+      onSuccess(true); // Pass true for login
       onOpenChange(false);
     }
   };
@@ -55,7 +55,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onOpenChange, onSuccess, on
     if (error) {
       onError(error.message);
     } else {
-      onSuccess();
+      onSuccess(false); // Pass false for registration
       onOpenChange(false);
     }
   };

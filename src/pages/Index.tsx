@@ -16,8 +16,10 @@ const Index = () => {
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleAuthSuccess = () => {
-    setSuccessModalOpen(true);
+  const handleAuthSuccess = (isLogin: boolean = false) => {
+    if (isLogin) {
+      setSuccessModalOpen(true);
+    }
   };
 
   const handleAuthError = (message: string) => {
