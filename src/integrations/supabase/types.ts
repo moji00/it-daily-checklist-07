@@ -19,6 +19,7 @@ export type Database = {
           access_level: string | null
           created_at: string
           department: string | null
+          full_name: string | null
           id: string
           permissions: string[] | null
           updated_at: string
@@ -28,6 +29,7 @@ export type Database = {
           access_level?: string | null
           created_at?: string
           department?: string | null
+          full_name?: string | null
           id?: string
           permissions?: string[] | null
           updated_at?: string
@@ -37,6 +39,7 @@ export type Database = {
           access_level?: string | null
           created_at?: string
           department?: string | null
+          full_name?: string | null
           id?: string
           permissions?: string[] | null
           updated_at?: string
@@ -49,6 +52,7 @@ export type Database = {
           access_level: string | null
           assigned_tasks: string[] | null
           created_at: string
+          full_name: string | null
           id: string
           permissions: string[] | null
           supervisor_id: string | null
@@ -59,6 +63,7 @@ export type Database = {
           access_level?: string | null
           assigned_tasks?: string[] | null
           created_at?: string
+          full_name?: string | null
           id?: string
           permissions?: string[] | null
           supervisor_id?: string | null
@@ -69,6 +74,7 @@ export type Database = {
           access_level?: string | null
           assigned_tasks?: string[] | null
           created_at?: string
+          full_name?: string | null
           id?: string
           permissions?: string[] | null
           supervisor_id?: string | null

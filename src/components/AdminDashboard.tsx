@@ -13,6 +13,7 @@ import { DailyChecklist, User } from '@/types';
 import { Users, CheckCircle, Clock, AlertTriangle, Calendar as CalendarIcon, UserPlus, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard: React.FC = () => {
   const [allChecklists, setAllChecklists] = useState<DailyChecklist[]>([]);
@@ -65,10 +66,35 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data: adminData } = await supabase
+        .from('admin_data')
+        .select('user_id, full_name');
+      
+      const { data: adminUserData } = await supabase
+        .from('admin_user_data')
+        .select('user_id, full_name');
+      
+      const allUsers = [
+        ...(adminData || []).map(u => ({ id: u.user_id, name: u.full_name })),
+        ...(adminUserData || []).map(u => ({ id: u.user_id, name: u.full_name }))
+      ];
+      
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
   const getUserName = (userId: string) => {
-    const savedUsers = localStorage.getItem('mockUsers');
-    const users = savedUsers ? JSON.parse(savedUsers) : [];
-    const user = users.find((u: User & { password: string }) => u.id === userId);
+    const user = users.find(u => u.id === userId);
     return user ? user.name : `User ${userId}`;
   };
 
