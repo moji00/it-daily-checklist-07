@@ -109,57 +109,56 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      // Clean and validate username
-      const cleanUsername = newUser.username.trim().toLowerCase();
-      
-      // Create email from username - if username doesn't contain @, append domain
-      const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@company.local`;
-      
-      console.log('Creating user with email:', email);
-      
-      // Create user in Supabase Auth
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password: newUser.password,
-        user_metadata: {
+      // Get the current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create users",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Call the edge function to create the user
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          username: newUser.username,
+          password: newUser.password,
           name: newUser.name,
-          role: newUser.role,
-          username: cleanUsername
-        },
-        email_confirm: true // Auto-confirm email to allow immediate login
+          role: newUser.role
+        }
       });
 
-      if (authError) {
-        console.error('Auth error:', authError);
+      if (error) {
+        console.error('Edge function error:', error);
         toast({
           title: "Error",
-          description: authError.message,
+          description: error.message || "Failed to create user",
           variant: "destructive"
         });
         return;
       }
 
-      if (!authUser.user) {
+      if (data.error) {
         toast({
           title: "Error",
-          description: "Failed to create user account",
+          description: data.error,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('User created successfully:', authUser.user.id);
+      console.log('User created successfully:', data.user?.id);
 
-      // Wait a moment for the trigger to complete
+      // Wait a moment for the trigger to complete, then refresh users
       setTimeout(() => {
-        loadUsers(); // Refresh the users list
+        loadUsers();
       }, 1000);
 
-      const loginEmail = cleanUsername.includes('@') ? cleanUsername : email;
-      
       toast({
         title: "Success",
-        description: `User ${newUser.name} created successfully! Login email: ${loginEmail}`,
+        description: `${data.message} Login email: ${data.loginEmail}`,
         duration: 5000
       });
 
