@@ -109,21 +109,28 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      // Create user in Supabase Auth using the username as email (with domain)
-      const email = newUser.username.includes('@') ? newUser.username : `${newUser.username}@company.local`;
+      // Clean and validate username
+      const cleanUsername = newUser.username.trim().toLowerCase();
       
+      // Create email from username - if username doesn't contain @, append domain
+      const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@company.local`;
+      
+      console.log('Creating user with email:', email);
+      
+      // Create user in Supabase Auth
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
         password: newUser.password,
         user_metadata: {
           name: newUser.name,
           role: newUser.role,
-          username: newUser.username
+          username: cleanUsername
         },
         email_confirm: true // Auto-confirm email to allow immediate login
       });
 
       if (authError) {
+        console.error('Auth error:', authError);
         toast({
           title: "Error",
           description: authError.message,
@@ -135,20 +142,29 @@ const AdminDashboard: React.FC = () => {
       if (!authUser.user) {
         toast({
           title: "Error",
-          description: "Failed to create user",
+          description: "Failed to create user account",
           variant: "destructive"
         });
         return;
       }
 
+      console.log('User created successfully:', authUser.user.id);
+
+      // Wait a moment for the trigger to complete
+      setTimeout(() => {
+        loadUsers(); // Refresh the users list
+      }, 1000);
+
+      const loginEmail = cleanUsername.includes('@') ? cleanUsername : email;
+      
       toast({
         title: "Success",
-        description: `User ${newUser.name} has been created successfully. They can now log in with email: ${email}`
+        description: `User ${newUser.name} created successfully! Login email: ${loginEmail}`,
+        duration: 5000
       });
 
       setNewUser({ username: '', password: '', name: '', role: 'user' });
       setIsAddUserOpen(false);
-      loadUsers(); // Refresh the users list
       
     } catch (error) {
       console.error('Error creating user:', error);
