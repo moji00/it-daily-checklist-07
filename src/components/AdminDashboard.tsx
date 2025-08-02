@@ -98,7 +98,7 @@ const AdminDashboard: React.FC = () => {
     return user ? user.name : `User ${userId}`;
   };
 
-  const addUser = () => {
+  const addUser = async () => {
     if (!newUser.username || !newUser.password || !newUser.name) {
       toast({
         title: "Error",
@@ -108,36 +108,56 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    const savedUsers = localStorage.getItem('mockUsers');
-    const users = savedUsers ? JSON.parse(savedUsers) : [
-      { id: '1', username: 'admin', password: 'admin123', role: 'admin', name: 'IT Administrator' },
-      { id: '2', username: 'john.doe', password: 'user123', role: 'user', name: 'John Doe' },
-      { id: '3', username: 'jane.smith', password: 'user123', role: 'user', name: 'Jane Smith' }
-    ];
+    try {
+      // Create user in Supabase Auth using the username as email (with domain)
+      const email = newUser.username.includes('@') ? newUser.username : `${newUser.username}@company.local`;
+      
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password: newUser.password,
+        user_metadata: {
+          name: newUser.name,
+          role: newUser.role,
+          username: newUser.username
+        },
+        email_confirm: true // Auto-confirm email to allow immediate login
+      });
 
-    // Check if username already exists
-    if (users.some((u: User & { password: string }) => u.username === newUser.username)) {
+      if (authError) {
+        toast({
+          title: "Error",
+          description: authError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!authUser.user) {
+        toast({
+          title: "Error",
+          description: "Failed to create user",
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
-        title: "Error", 
-        description: "Username already exists",
+        title: "Success",
+        description: `User ${newUser.name} has been created successfully. They can now log in with email: ${email}`
+      });
+
+      setNewUser({ username: '', password: '', name: '', role: 'user' });
+      setIsAddUserOpen(false);
+      loadUsers(); // Refresh the users list
+      
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create user. Please try again.",
         variant: "destructive"
       });
-      return;
     }
-
-    const newUserId = (Math.max(...users.map((u: User & { password: string }) => parseInt(u.id))) + 1).toString();
-    const userToAdd = { ...newUser, id: newUserId };
-    
-    users.push(userToAdd);
-    localStorage.setItem('mockUsers', JSON.stringify(users));
-    
-    setNewUser({ username: '', password: '', name: '', role: 'user' });
-    setIsAddUserOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `User ${newUser.name} has been added successfully`
-    });
   };
 
   const getChecklistsForDate = (date: Date) => {
@@ -202,13 +222,16 @@ const AdminDashboard: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Username/Email</Label>
                   <Input
                     id="username"
                     value={newUser.username}
                     onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    placeholder="Enter username"
+                    placeholder="Enter username or email"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Can be a username (will create @company.local email) or full email address
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="password">Password</Label>
