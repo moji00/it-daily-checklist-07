@@ -4,11 +4,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Shield, User, Calendar, Settings, Key } from 'lucide-react';
-import ChangePasswordForm from './ChangePasswordForm';
-
 const Header: React.FC = () => {
-  const { user, profile, signOut } = useAuth();
-  const [showChangePassword, setShowChangePassword] = useState(false);
+  const { user, signOut } = useAuth();
 
   return (
     <header className="bg-card border-b border-border">
@@ -33,10 +30,10 @@ const Header: React.FC = () => {
         
         <div className="flex items-center space-x-4">
           <div className="text-right">
-            <p className="text-sm font-medium text-foreground">{profile?.name || user?.email}</p>
+            <p className="text-sm font-medium text-foreground">{user?.full_name || user?.username}</p>
             <p className="text-xs text-muted-foreground flex items-center justify-end">
               <User className="w-3 h-3 mr-1" />
-              {profile?.role === 'admin' ? 'Administrator' : 'User'}
+              {user?.role === 'admin' ? 'Administrator' : 'User'}
             </p>
           </div>
           <DropdownMenu>
@@ -47,10 +44,6 @@ const Header: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowChangePassword(true)}>
-                <Key className="w-4 h-4 mr-2" />
-                Change Password
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -59,12 +52,6 @@ const Header: React.FC = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
-        <DialogContent className="max-w-md">
-          <ChangePasswordForm onClose={() => setShowChangePassword(false)} />
-        </DialogContent>
-      </Dialog>
     </header>
   );
 };

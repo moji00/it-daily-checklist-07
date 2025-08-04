@@ -134,17 +134,22 @@ const AdminDashboard: React.FC = () => {
         return;
       }
 
-      // Clean username
+      // Clean username and hash password
       const cleanUsername = newUser.username.trim().toLowerCase();
+      const encoder = new TextEncoder();
+      const passwordData = encoder.encode(newUser.password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
       // Create user in the new users table
-      const { data, error } = await supabase
+      const { data: userData, error } = await supabase
         .from('users')
         .insert([{
           username: cleanUsername,
           full_name: newUser.name,
           role: newUser.role,
-          password_hash: newUser.password, // In production, this should be properly hashed
+          password_hash: hashedPassword,
           is_active: true
         }])
         .select()
@@ -164,7 +169,7 @@ const AdminDashboard: React.FC = () => {
         return;
       }
 
-      console.log('User created successfully:', data.id);
+      console.log('User created successfully:', userData.id);
       
       // Refresh the users list
       loadUsers();
