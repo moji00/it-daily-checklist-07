@@ -2,17 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-interface CustomUser {
-  id: string;
-  username: string;
-  full_name: string;
-  role: 'admin' | 'user';
-  sessionToken: string;
-  expiresAt: Date;
-  // Add email for backward compatibility
-  email?: string;
-}
-
 interface Profile {
   id: string;
   user_id: string;
@@ -22,82 +11,121 @@ interface Profile {
 }
 
 interface AuthContextType {
-  user: CustomUser | null;
+  user: User | null;
   profile: Profile | null;
   session: Session | null;
-  signInWithUsername: (username: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, role?: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (password: string) => Promise<{ error: any }>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<CustomUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const savedUser = localStorage.getItem('checklistUser');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        if (userData.expiresAt && new Date(userData.expiresAt) > new Date()) {
-          setUser(userData);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile
+          setTimeout(async () => {
+            try {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              setProfile(profileData as Profile);
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
+          }, 0);
         } else {
-          localStorage.removeItem('checklistUser');
+          setProfile(null);
         }
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('checklistUser');
+        setIsLoading(false);
       }
-    }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (!session) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithUsername = async (username: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string, role: string = 'user') => {
     setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('authenticate-user', {
-        body: { username, password }
-      });
-
-      if (error) {
-        setIsLoading(false);
-        return { error: error.message || 'Authentication failed' };
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          name: name,
+          role: role
+        }
       }
+    });
+    
+    setIsLoading(false);
+    return { error };
+  };
 
-      if (data.error) {
-        setIsLoading(false);
-        return { error: data.error };
-      }
-
-      if (data.success && data.user) {
-        const userData = {
-          ...data.user,
-          expiresAt: new Date(data.user.expiresAt)
-        };
-        setUser(userData);
-        localStorage.setItem('checklistUser', JSON.stringify(userData));
-        setIsLoading(false);
-        return { error: null };
-      }
-
-      setIsLoading(false);
-      return { error: 'Invalid response from server' };
-    } catch (error) {
-      console.error('Sign in error:', error);
-      setIsLoading(false);
-      return { error: 'Network error. Please try again.' };
-    }
+  const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    setIsLoading(false);
+    return { error };
   };
 
   const signOut = async () => {
-    setUser(null);
-    setProfile(null);
-    setSession(null);
-    localStorage.removeItem('checklistUser');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error.message);
+    } else {
+      // Clear states immediately after successful logout
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+    return { error };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
+    return { error };
   };
 
   return (
@@ -105,8 +133,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       profile,
       session,
-      signInWithUsername,
+      signUp,
+      signIn,
       signOut,
+      resetPassword,
+      updatePassword,
       isLoading
     }}>
       {children}
