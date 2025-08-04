@@ -103,8 +103,16 @@ serve(async (req) => {
     })
 
     if (createError) {
+      // Provide more specific error messages
+      let errorMessage = createError.message
+      if (createError.message.includes('User already registered')) {
+        errorMessage = `A user with email "${email}" already exists. Please use a different email or username.`
+      } else if (createError.message.includes('already been registered')) {
+        errorMessage = `A user with email "${email}" already exists. Please use a different email or username.`
+      }
+      
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: errorMessage }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
