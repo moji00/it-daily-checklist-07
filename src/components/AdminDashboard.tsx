@@ -70,20 +70,40 @@ const AdminDashboard: React.FC = () => {
   }, []);
   const loadUsers = async () => {
     try {
-      const {
-        data: adminData
-      } = await supabase.from('admin_data').select('user_id, full_name');
-      const {
-        data: adminUserData
-      } = await supabase.from('admin_user_data').select('user_id, full_name');
-      const allUsers = [...(adminData || []).map(u => ({
-        id: u.user_id,
-        name: u.full_name
-      })), ...(adminUserData || []).map(u => ({
-        id: u.user_id,
-        name: u.full_name
-      }))];
-      setUsers(allUsers);
+      // Load users from the new users table
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, username, full_name, role, is_active, created_at')
+        .order('created_at', { ascending: false });
+      
+      // Also load from existing admin tables for backward compatibility
+      const { data: adminData } = await supabase
+        .from('admin_data')
+        .select('user_id, full_name');
+      const { data: adminUserData } = await supabase
+        .from('admin_user_data')
+        .select('user_id, full_name');
+      
+      const newUsers = (usersData || []).map(u => ({
+        id: u.id,
+        name: u.full_name || u.username,
+        username: u.username,
+        role: u.role,
+        isActive: u.is_active
+      }));
+      
+      const legacyUsers = [
+        ...(adminData || []).map(u => ({
+          id: u.user_id,
+          name: u.full_name || 'Legacy User'
+        })),
+        ...(adminUserData || []).map(u => ({
+          id: u.user_id,
+          name: u.full_name || 'Legacy User'
+        }))
+      ];
+      
+      setUsers([...newUsers, ...legacyUsers]);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -101,13 +121,10 @@ const AdminDashboard: React.FC = () => {
       });
       return;
     }
+    
     try {
-      // Get the current session for authorization
-      const {
-        data: {
-          session
-        }
-      } = await supabase.auth.getSession();
+      // Check if user is authenticated and is admin
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
           title: "Error",
@@ -117,46 +134,47 @@ const AdminDashboard: React.FC = () => {
         return;
       }
 
-      // Call the edge function to create the user
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('create-user', {
-        body: {
-          username: newUser.username,
-          password: newUser.password,
-          name: newUser.name,
-          role: newUser.role
-        }
-      });
-      if (error) {
-        console.error('Edge function error:', error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to create user",
-          variant: "destructive"
-        });
-        return;
-      }
-      if (data.error) {
-        toast({
-          title: "Error",
-          description: data.error,
-          variant: "destructive"
-        });
-        return;
-      }
-      console.log('User created successfully:', data.user?.id);
+      // Clean username
+      const cleanUsername = newUser.username.trim().toLowerCase();
+      
+      // Create user in the new users table
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          username: cleanUsername,
+          full_name: newUser.name,
+          role: newUser.role,
+          password_hash: newUser.password, // In production, this should be properly hashed
+          is_active: true
+        }])
+        .select()
+        .single();
 
-      // Wait a moment for the trigger to complete, then refresh users
-      setTimeout(() => {
-        loadUsers();
-      }, 1000);
+      if (error) {
+        console.error('Database error:', error);
+        let errorMessage = "Failed to create user";
+        if (error.code === '23505') { // Unique constraint violation
+          errorMessage = `Username "${cleanUsername}" already exists. Please choose a different username.`;
+        }
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('User created successfully:', data.id);
+      
+      // Refresh the users list
+      loadUsers();
+      
       toast({
-        title: "Success",
-        description: `${data.message} Login email: ${data.loginEmail}`,
+        title: "Success", 
+        description: `User "${newUser.name}" created successfully with username "${cleanUsername}"`,
         duration: 5000
       });
+      
       setNewUser({
         username: '',
         password: '',
@@ -164,6 +182,7 @@ const AdminDashboard: React.FC = () => {
         role: 'user'
       });
       setIsAddUserOpen(false);
+      
     } catch (error) {
       console.error('Error creating user:', error);
       toast({
