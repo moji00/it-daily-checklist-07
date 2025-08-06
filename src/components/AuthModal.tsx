@@ -30,7 +30,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onOpenChange, onSuccess, on
       onError(error.message);
     } else {
       onSuccess(true); // Pass true for login
-      onOpenChange(false);
     }
   };
 

@@ -18,6 +18,7 @@ const Index = () => {
 
   const handleAuthSuccess = (isLogin: boolean = false) => {
     if (isLogin) {
+      setAuthModalOpen(false);
       setSuccessModalOpen(true);
     }
   };
