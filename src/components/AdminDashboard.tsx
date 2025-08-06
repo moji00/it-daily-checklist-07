@@ -10,13 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DailyChecklist, User } from '@/types';
-import { Users, CheckCircle, Clock, AlertTriangle, Calendar as CalendarIcon, UserPlus, Eye } from 'lucide-react';
+import { Users, CheckCircle, Clock, AlertTriangle, Calendar as CalendarIcon, UserPlus, Eye, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import UserActivityReport from './UserActivityReport';
 const AdminDashboard: React.FC = () => {
   const [allChecklists, setAllChecklists] = useState<DailyChecklist[]>([]);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -262,6 +264,10 @@ const AdminDashboard: React.FC = () => {
             </DialogContent>
           </Dialog>
           
+          <Button onClick={() => setIsReportOpen(true)} variant="outline">
+            <FileText className="w-4 h-4 mr-2" />
+            User Reports
+          </Button>
         </div>
       </div>
 
@@ -471,6 +477,9 @@ const AdminDashboard: React.FC = () => {
             </div>}
         </DialogContent>
       </Dialog>
+
+      {/* User Activity Report Modal */}
+      <UserActivityReport open={isReportOpen} onOpenChange={setIsReportOpen} />
     </div>;
 };
 export default AdminDashboard;
