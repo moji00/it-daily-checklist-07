@@ -14,39 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin_data: {
-        Row: {
-          access_level: string | null
-          created_at: string
-          department: string | null
-          full_name: string | null
-          id: string
-          permissions: string[] | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_level?: string | null
-          created_at?: string
-          department?: string | null
-          full_name?: string | null
-          id?: string
-          permissions?: string[] | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_level?: string | null
-          created_at?: string
-          department?: string | null
-          full_name?: string | null
-          id?: string
-          permissions?: string[] | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       admin_user_data: {
         Row: {
           access_level: string | null
@@ -270,31 +237,40 @@ export type Database = {
       }
       users: {
         Row: {
+          access_level: string | null
           created_at: string
+          department: string | null
           full_name: string | null
           id: string
           is_active: boolean
           password_hash: string | null
+          permissions: string[] | null
           role: string
           updated_at: string
           username: string
         }
         Insert: {
+          access_level?: string | null
           created_at?: string
+          department?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean
           password_hash?: string | null
+          permissions?: string[] | null
           role?: string
           updated_at?: string
           username: string
         }
         Update: {
+          access_level?: string | null
           created_at?: string
+          department?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean
           password_hash?: string | null
+          permissions?: string[] | null
           role?: string
           updated_at?: string
           username?: string
