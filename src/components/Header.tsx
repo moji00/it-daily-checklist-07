@@ -4,10 +4,10 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Shield, User, Calendar, Settings, Key } from 'lucide-react';
-
+import ChangePasswordForm from './ChangePasswordForm';
 
 const Header: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   return (
@@ -33,10 +33,10 @@ const Header: React.FC = () => {
         
         <div className="flex items-center space-x-4">
           <div className="text-right">
-            <p className="text-sm font-medium text-foreground">{user?.full_name || user?.username}</p>
+            <p className="text-sm font-medium text-foreground">{profile?.name || user?.email}</p>
             <p className="text-xs text-muted-foreground flex items-center justify-end">
               <User className="w-3 h-3 mr-1" />
-              {user?.role === 'admin' ? 'Administrator' : 'User'}
+              {profile?.role === 'admin' ? 'Administrator' : 'User'}
             </p>
           </div>
           <DropdownMenu>
@@ -62,10 +62,7 @@ const Header: React.FC = () => {
       
       <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
         <DialogContent className="max-w-md">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Change Password</h3>
-            <p className="text-muted-foreground">Password management is not available in this authentication system.</p>
-          </div>
+          <ChangePasswordForm onClose={() => setShowChangePassword(false)} />
         </DialogContent>
       </Dialog>
     </header>

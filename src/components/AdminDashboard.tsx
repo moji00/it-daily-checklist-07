@@ -70,17 +70,20 @@ const AdminDashboard: React.FC = () => {
   }, []);
   const loadUsers = async () => {
     try {
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id, username, full_name, role, is_active')
-        .eq('is_active', true);
-      
-      setUsers((usersData || []).map(u => ({
-        id: u.id,
-        name: u.full_name || u.username,
-        username: u.username,
-        role: u.role
-      })));
+      const {
+        data: adminData
+      } = await supabase.from('admin_data').select('user_id, full_name');
+      const {
+        data: adminUserData
+      } = await supabase.from('admin_user_data').select('user_id, full_name');
+      const allUsers = [...(adminData || []).map(u => ({
+        id: u.user_id,
+        name: u.full_name
+      })), ...(adminUserData || []).map(u => ({
+        id: u.user_id,
+        name: u.full_name
+      }))];
+      setUsers(allUsers);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -99,26 +102,35 @@ const AdminDashboard: React.FC = () => {
       return;
     }
     try {
-      // Hash the password using SHA-256
-      const encoder = new TextEncoder();
-      const data = encoder.encode(newUser.password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-      // Insert user directly into users table
-      const { error } = await supabase
-        .from('users')
-        .insert({
-          username: newUser.username,
-          password_hash: hashedPassword,
-          full_name: newUser.name,
-          role: newUser.role,
-          is_active: true
+      // Get the current session for authorization
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create users",
+          variant: "destructive"
         });
+        return;
+      }
 
+      // Call the edge function to create the user
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('create-user', {
+        body: {
+          username: newUser.username,
+          password: newUser.password,
+          name: newUser.name,
+          role: newUser.role
+        }
+      });
       if (error) {
-        console.error('Database error:', error);
+        console.error('Edge function error:', error);
         toast({
           title: "Error",
           description: error.message || "Failed to create user",
@@ -126,13 +138,25 @@ const AdminDashboard: React.FC = () => {
         });
         return;
       }
+      if (data.error) {
+        toast({
+          title: "Error",
+          description: data.error,
+          variant: "destructive"
+        });
+        return;
+      }
+      console.log('User created successfully:', data.user?.id);
 
+      // Wait a moment for the trigger to complete, then refresh users
+      setTimeout(() => {
+        loadUsers();
+      }, 1000);
       toast({
         title: "Success",
-        description: `User ${newUser.username} created successfully`,
+        description: `${data.message} Login email: ${data.loginEmail}`,
         duration: 5000
       });
-      
       setNewUser({
         username: '',
         password: '',
@@ -140,7 +164,6 @@ const AdminDashboard: React.FC = () => {
         role: 'user'
       });
       setIsAddUserOpen(false);
-      loadUsers();
     } catch (error) {
       console.error('Error creating user:', error);
       toast({
@@ -200,13 +223,13 @@ const AdminDashboard: React.FC = () => {
                 })} placeholder="Enter full name" />
                 </div>
                 <div>
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Username/Email</Label>
                   <Input id="username" value={newUser.username} onChange={e => setNewUser({
                   ...newUser,
                   username: e.target.value
-                })} placeholder="Enter username" />
+                })} placeholder="Enter username or email" />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Username must be unique and will be used for login
+                    Can be a username (will create @company.local email) or full email address
                   </p>
                 </div>
                 <div>
