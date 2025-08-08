@@ -15,10 +15,12 @@ import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import UserActivityReport from './UserActivityReport';
+import ChecklistHistory from './ChecklistHistory';
 const AdminDashboard: React.FC = () => {
   const [allChecklists, setAllChecklists] = useState<DailyChecklist[]>([]);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -268,6 +270,9 @@ const AdminDashboard: React.FC = () => {
             <FileText className="w-4 h-4 mr-2" />
             User Reports
           </Button>
+          <Button onClick={() => setIsHistoryOpen(true)} variant="outline">
+            View History
+          </Button>
         </div>
       </div>
 
@@ -480,6 +485,9 @@ const AdminDashboard: React.FC = () => {
 
       {/* User Activity Report Modal */}
       <UserActivityReport open={isReportOpen} onOpenChange={setIsReportOpen} />
+
+      {/* Checklist History Modal */}
+      <ChecklistHistory open={isHistoryOpen} onOpenChange={setIsHistoryOpen} />
     </div>;
-};
-export default AdminDashboard;
+  };
+  export default AdminDashboard;

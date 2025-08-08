@@ -8,11 +8,13 @@ import { defaultChecklistItems } from '@/data/checklistItems';
 import ChecklistItemCard from './ChecklistItemCard';
 import ChecklistItemForm from './ChecklistItemForm';
 import PrintableChecklist from './PrintableChecklist';
+import ChecklistHistory from './ChecklistHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { CheckCircle, Clock, AlertTriangle, RotateCcw, Download, FileText, File, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -21,8 +23,12 @@ const Dashboard: React.FC = () => {
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const printRef = useRef<HTMLDivElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedToDb, setSavedToDb] = useState(false);
   
   const today = new Date().toISOString().split('T')[0];
+  const savedKey = `saved_db_${user?.id}_${today}`;
 
   const downloadPDF = async () => {
     if (!checklist || !printRef.current) return;
@@ -107,6 +113,11 @@ const Dashboard: React.FC = () => {
     loadTodaysChecklist();
   }, [user?.id]);
 
+  // Track if we already saved today's checklist to DB
+  useEffect(() => {
+    setSavedToDb(localStorage.getItem(savedKey) === 'true');
+  }, [savedKey]);
+
   const loadTodaysChecklist = () => {
     const savedChecklist = localStorage.getItem(`checklist_${user?.id}_${today}`);
     
@@ -135,6 +146,63 @@ const Dashboard: React.FC = () => {
   const saveChecklist = (updatedChecklist: DailyChecklist) => {
     localStorage.setItem(`checklist_${user?.id}_${today}`, JSON.stringify(updatedChecklist));
   };
+
+  const saveToDatabase = async () => {
+    if (!user || !checklist) return;
+    if (savedToDb) return;
+    try {
+      setIsSaving(true);
+      // Insert the daily checklist as completed
+      const { data: inserted, error: insertError } = await supabase
+        .from('daily_checklists')
+        .insert({
+          date: today,
+          user_id: user.id,
+          overall_status: 'completed'
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+      const checklistId = inserted?.id;
+
+      // Prepare items payload
+      const itemsPayload = checklist.items.map((it) => ({
+        title: it.title,
+        description: it.description,
+        category: it.category,
+        priority: it.priority,
+        completed: !!it.completed,
+        remarks: it.remarks || '',
+        completed_at: it.completed && it.completedAt ? new Date(it.completedAt).toISOString() : null,
+        completed_by: user.id,
+        daily_checklist_id: checklistId,
+      }));
+
+      if (itemsPayload.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('checklist_items')
+          .insert(itemsPayload);
+        if (itemsError) throw itemsError;
+      }
+
+      localStorage.setItem(savedKey, 'true');
+      setSavedToDb(true);
+      toast({ title: 'Saved', description: 'Checklist saved to history.' });
+    } catch (e: any) {
+      console.error('saveToDatabase error', e);
+      toast({ title: 'Error', description: e.message || 'Failed to save checklist', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Automatically save when checklist is completed
+  useEffect(() => {
+    if (checklist?.overallStatus === 'completed' && !savedToDb) {
+      void saveToDatabase();
+    }
+  }, [checklist?.overallStatus, savedToDb]);
 
   const updateChecklistItem = (itemId: string, updates: Partial<ChecklistItem>) => {
     if (!checklist) return;
@@ -342,6 +410,14 @@ const Dashboard: React.FC = () => {
               <RotateCcw className="w-3 h-3 mr-1" />
               Reset All
             </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setHistoryOpen(true)}
+              className="w-full"
+            >
+              View History
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -384,6 +460,9 @@ const Dashboard: React.FC = () => {
           userName={profile?.name || user?.email || 'Unknown User'}
         />
       </div>
+
+      {/* History Dialog */}
+      <ChecklistHistory open={historyOpen} onOpenChange={setHistoryOpen} userId={user?.id} />
     </div>
   );
 };
